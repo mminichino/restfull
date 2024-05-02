@@ -51,7 +51,6 @@ class RestAPI(object):
         self.port = port
         self.scheme = 'https' if self.ssl else 'http'
         self.response_text = None
-        self.response_list = []
         self.response_dict = {}
         self.response_code = 200
         try:
@@ -155,7 +154,10 @@ class RestAPI(object):
         return self
 
     def filter(self, key: str, value: str):
-        self.response_list = [item for item in self.response_list if item.get(key) == value]
+        if type(self.response_dict) is list:
+            self.response_dict = [item for item in self.response_dict if item.get(key) == value]
+        else:
+            self.response_dict = self.response_dict if dict(self.response_dict).get(key) == value else {}
         return self
 
     def list_item(self, index: int):
@@ -163,6 +165,9 @@ class RestAPI(object):
             return list(self.records())[index]
         except IndexError:
             return None
+
+    def list(self):
+        return list(self.records())
 
     def json_key(self, key: str):
         record = self.record()
@@ -188,11 +193,24 @@ class RestAPI(object):
         return record.get(total_tag), record.get(pages_tag)
 
     @property
+    def is_present(self) -> bool:
+        if self.response_dict:
+            return True
+        else:
+            return False
+
+    @property
+    def is_empty(self) -> bool:
+        if self.response_dict:
+            return False
+        else:
+            return True
+
+    @property
     def code(self):
         return self.response_code
 
     def reset(self):
-        self.response_list = []
         self.response_dict = {}
 
     @staticmethod
