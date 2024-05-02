@@ -13,6 +13,7 @@ setup(
     author='Michael Minichino',
     python_requires='>=3.8',
     install_requires=[
+        "attrs>=23.1.0",
         "requests>=2.31.0",
         "aiohttp>=3.9.3",
         "pytoolbase>=1.0.1",

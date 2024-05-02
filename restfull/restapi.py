@@ -9,6 +9,7 @@ import warnings
 import asyncio
 import ssl
 from restfull.base_auth import RestAuthBase
+from restfull.data import JsonObject, JsonList
 from typing import Union
 from requests.adapters import HTTPAdapter, Retry
 from aiohttp import ClientSession, TCPConnector
@@ -51,7 +52,7 @@ class RestAPI(object):
         self.port = port
         self.scheme = 'https' if self.ssl else 'http'
         self.response_text = None
-        self.response_dict = {}
+        self.response_dict: Union[list, dict] = {}
         self.response_code = 200
         try:
             self.loop = asyncio.get_event_loop()
@@ -191,6 +192,12 @@ class RestAPI(object):
     def page_count(self, total_tag: str = "total", pages_tag: str = "total_pages"):
         record = self.record()
         return record.get(total_tag), record.get(pages_tag)
+
+    def json_object(self) -> JsonObject:
+        return JsonObject(self.response_dict)
+
+    def json_list(self) -> JsonList:
+        return JsonList(self.response_dict)
 
     @property
     def is_present(self) -> bool:
