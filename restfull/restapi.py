@@ -81,6 +81,7 @@ class RestAPI(object):
     def get(self, endpoint: str):
         url = self.build_url(endpoint)
         self.reset()
+        logger.debug(f"GET {url}")
         response = self.session.get(url, auth=self.auth_class, verify=self.verify)
         self.response_text = response.text
         self.response_code = response.status_code
@@ -90,6 +91,7 @@ class RestAPI(object):
         _endpoint = self.paged_endpoint(endpoint, page_tag, page, per_page_tag, per_page)
         url = self.build_url(_endpoint)
         self.reset()
+        logger.debug(f"GET {url}")
         response = self.session.get(url, auth=self.auth_class, verify=self.verify)
         self.response_text = response.text
         self.response_code = response.status_code
@@ -98,6 +100,7 @@ class RestAPI(object):
     def post(self, endpoint: str, body: dict):
         url = self.build_url(endpoint)
         self.reset()
+        logger.debug(f"POST {url}")
         response = self.session.post(url, auth=self.auth_class, json=body, verify=self.verify)
         self.response_text = response.text
         self.response_code = response.status_code
@@ -106,6 +109,7 @@ class RestAPI(object):
     def patch(self, endpoint: str, body: dict):
         url = self.build_url(endpoint)
         self.reset()
+        logger.debug(f"PATCH {url}")
         response = self.session.patch(url, auth=self.auth_class, json=body, verify=self.verify)
         self.response_text = response.text
         self.response_code = response.status_code
@@ -114,6 +118,7 @@ class RestAPI(object):
     def put(self, endpoint: str, body: dict):
         url = self.build_url(endpoint)
         self.reset()
+        logger.debug(f"PUT {url}")
         response = self.session.put(url, auth=self.auth_class, json=body, verify=self.verify)
         self.response_text = response.text
         self.response_code = response.status_code
@@ -122,6 +127,7 @@ class RestAPI(object):
     def delete(self, endpoint: str):
         url = self.build_url(endpoint)
         self.reset()
+        logger.debug(f"DELETE {url}")
         response = self.session.delete(url, auth=self.auth_class, verify=self.verify)
         self.response_text = response.text
         self.response_code = response.status_code
