@@ -1,6 +1,6 @@
-# pytoolbase 1.0.2
+# restfull 1.0.3
 
 ## Installing
 ```
-$ pip install pytoolbase
+$ pip install restfull
 ```
