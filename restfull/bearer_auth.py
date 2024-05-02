@@ -4,7 +4,7 @@
 from restfull.base_auth import RestAuthBase
 
 
-class CapellaAuth(RestAuthBase):
+class BearerAuth(RestAuthBase):
 
     def __init__(self, token: str):
         self.profile_token = token
