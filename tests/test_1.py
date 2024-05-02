@@ -95,8 +95,23 @@ class TestMain(object):
         code = rest.delete(endpoint).validate().code
         assert code == 204
 
+    def test_9(self):
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/users/1"
+        data = rest.get(endpoint).validate().as_json("data").json_object()
+        assert data.as_dict.get("id") == 1
+
+    def test_10(self):
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/users"
+        data = rest.get_by_page(endpoint, page=2).validate().as_json("data").json_list()
+        assert data.size == 6
+        assert data.as_list[2].get("id") == 9
+
     @pytest.mark.asyncio
-    async def test_9(self):
+    async def test_11(self):
         data = []
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
@@ -112,7 +127,7 @@ class TestMain(object):
         assert data_sorted[7].get("first_name") == "Lindsay"
 
     @pytest.mark.asyncio
-    async def test_10(self):
+    async def test_12(self):
         data = []
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
