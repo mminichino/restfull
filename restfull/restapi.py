@@ -195,13 +195,14 @@ class RestAPI(object):
             raise ValueError("More than one object matches search criteria")
         return self.record()
 
-    def page_count(self, total_tag: str = "total", pages_tag: str = "total_pages", cursor: str = None, category: str = None):
+    def page_count(self, total_tag: str = "total", pages_tag: str = "total_pages", data_key="data", cursor: str = None, category: str = None):
         record = self.record()
+        data = record.get(data_key)
         if cursor is not None:
             record = record.get(cursor, {})
         if category is not None:
             record = record.get(category, {})
-        return record.get(total_tag), record.get(pages_tag)
+        return record.get(total_tag), record.get(pages_tag), data
 
     def json_object(self) -> JsonObject:
         return JsonObject(self.response_dict)
@@ -209,24 +210,37 @@ class RestAPI(object):
     def json_list(self) -> JsonList:
         return JsonList(self.response_dict)
 
-    async def get_paged_endpoint(self, endpoint: str,
+    async def get_paged_endpoint(self,
+                                 endpoint: str,
                                  page_tag: str = "page",
                                  total_tag: str = "total",
                                  pages_tag: str = "total_pages",
+                                 per_page_tag: str = None,
+                                 per_page: int = 10,
                                  data_key="data",
                                  cursor: str = None,
                                  category: str = None):
-        data = []
-        total, pages = self.get_by_page(endpoint, page_tag).validate().as_json().page_count(total_tag, pages_tag, cursor, category)
+        total, pages, data = self.get_by_page(endpoint, page_tag, 1, per_page_tag, per_page).validate().as_json().page_count(total_tag, pages_tag, data_key, cursor, category)
 
-        for result in asyncio.as_completed([self.get_data_async(self.paged_endpoint(endpoint, page=page), data_key=data_key) for page in range(1, pages + 1)]):
-            block = await result
-            data.extend(block)
+        if pages > 1:
+            for result in asyncio.as_completed([self.get_data_async(self.paged_endpoint(endpoint, page_tag, page, per_page_tag, per_page),
+                                                                    data_key=data_key) for page in range(2, pages + 1)]):
+                block = await result
+                data.extend(block)
 
         return data
 
-    def get_paged(self, endpoint: str, page_tag: str = "page", total_tag: str = "total", pages_tag: str = "total_pages", data_key="data", cursor: str = None, category: str = None):
-        self.response_dict = self.loop.run_until_complete(self.get_paged_endpoint(endpoint, page_tag, total_tag, pages_tag, data_key, cursor, category))
+    def get_paged(self,
+                  endpoint: str,
+                  page_tag: str = "page",
+                  total_tag: str = "total",
+                  pages_tag: str = "total_pages",
+                  per_page_tag: str = None,
+                  per_page: int = 10,
+                  data_key="data",
+                  cursor: str = None,
+                  category: str = None):
+        self.response_dict = self.loop.run_until_complete(self.get_paged_endpoint(endpoint, page_tag, total_tag, pages_tag, per_page_tag, per_page, data_key, cursor, category))
         return self
 
     @property

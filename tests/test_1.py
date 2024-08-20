@@ -41,7 +41,7 @@ class TestMain(object):
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
         endpoint = "/api/users"
-        total, pages = rest.get_by_page(endpoint).validate().as_json().page_count()
+        total, pages, data = rest.get_by_page(endpoint).validate().as_json().page_count()
         assert total == 12
         assert pages == 2
 
@@ -129,15 +129,15 @@ class TestMain(object):
 
     @pytest.mark.asyncio
     async def test_13(self):
-        data = []
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
         endpoint = "/api/users"
-        total, pages = rest.get_by_page(endpoint).validate().as_json().page_count()
+        total, pages, data = rest.get_by_page(endpoint).validate().as_json().page_count()
 
-        for result in asyncio.as_completed([rest.get_data_async(rest.paged_endpoint(endpoint, page=page), data_key="data") for page in range(1, pages + 1)]):
-            block = await result
-            data.extend(block)
+        if pages > 1:
+            for result in asyncio.as_completed([rest.get_data_async(rest.paged_endpoint(endpoint, page=page), data_key="data") for page in range(2, pages + 1)]):
+                block = await result
+                data.extend(block)
 
         assert len(data) == total
         data_sorted = sorted(data, key=lambda d: d['id'])
@@ -149,7 +149,7 @@ class TestMain(object):
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
         endpoint = "/api/users"
-        total, pages = rest.get_by_page(endpoint).validate().as_json().page_count()
+        total, pages, _ = rest.get_by_page(endpoint).validate().as_json().page_count()
 
         for result in asyncio.as_completed([rest.get_kv_async(rest.paged_endpoint(endpoint, page=page), key="id", value=9, data_key="data") for page in range(1, pages + 1)]):
             block = await result
