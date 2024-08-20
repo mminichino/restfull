@@ -110,8 +110,25 @@ class TestMain(object):
         assert data.size == 6
         assert data.as_list[2].get("id") == 9
 
+    def test_11(self):
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/users"
+        data = rest.get_paged(endpoint).validate().json_list()
+        assert data.size == 12
+
+    def test_12(self):
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/users/23"
+        try:
+            rest.get_paged(endpoint).validate().json_list()
+            assert False
+        except RetryableError:
+            pass
+
     @pytest.mark.asyncio
-    async def test_11(self):
+    async def test_13(self):
         data = []
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
@@ -127,7 +144,7 @@ class TestMain(object):
         assert data_sorted[7].get("first_name") == "Lindsay"
 
     @pytest.mark.asyncio
-    async def test_12(self):
+    async def test_14(self):
         data = []
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
