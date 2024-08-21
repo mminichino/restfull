@@ -4,7 +4,7 @@ import logging
 import pytest
 import warnings
 import asyncio
-from restfull.restapi import RestAPI, RetryableError
+from restfull.restapi import RestAPI, RetryableError, NotFoundError, NonRetryableError
 from restfull.basic_auth import BasicAuth
 
 warnings.filterwarnings("ignore")
@@ -51,9 +51,11 @@ class TestMain(object):
         endpoint = "/api/users/23"
         try:
             rest.get(endpoint).validate().as_json().record()
-        except RetryableError:
-            pass
-        assert rest.code == 404
+        except NotFoundError:
+            return
+        except (RetryableError, NonRetryableError):
+            assert False
+        assert False
 
     def test_5(self):
         auth = BasicAuth("username", "password")
@@ -123,9 +125,11 @@ class TestMain(object):
         endpoint = "/api/users/23"
         try:
             rest.get_paged(endpoint).validate().json_list()
+        except NotFoundError:
+            return
+        except (RetryableError, NonRetryableError):
             assert False
-        except RetryableError:
-            pass
+        assert False
 
     @pytest.mark.asyncio
     async def test_13(self):

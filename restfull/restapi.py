@@ -29,6 +29,22 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 
+class PermissionDeniedError(NonFatalError):
+    pass
+
+
+class NotFoundError(NonFatalError):
+    pass
+
+
+class RateLimitError(NonFatalError):
+    pass
+
+
+class InternalServerError(NonFatalError):
+    pass
+
+
 class RetryableError(NonFatalError):
     pass
 
@@ -54,6 +70,12 @@ class RestAPI(object):
         self.response_text = None
         self.response_dict: Union[list, dict] = {}
         self.response_code = 200
+        self.success_start = 200
+        self.success_end = 299
+        self.permission_denied_code = 403
+        self.not_found_code = 404
+        self.rate_limit_code = 429
+        self.server_error_code = 500
         try:
             self.loop = asyncio.get_event_loop()
         except RuntimeError:
@@ -77,6 +99,22 @@ class RestAPI(object):
                 self.port = 80
 
         self.url_prefix = f"{self.scheme}://{self.hostname}:{self.port}"
+
+    def set_success_range(self, start: int, end: int):
+        self.success_start = start
+        self.success_end = end
+
+    def set_permission_denied_code(self, code: int):
+        self.permission_denied_code = code
+
+    def set_not_found_code(self, code: int):
+        self.not_found_code = code
+
+    def set_rate_limit_code(self, code: int):
+        self.rate_limit_code = code
+
+    def set_server_error_code(self, code: int):
+        self.server_error_code = code
 
     def get(self, endpoint: str):
         url = self.build_url(endpoint)
@@ -134,8 +172,17 @@ class RestAPI(object):
         return self
 
     def validate(self):
-        if 200 <= self.response_code < 400:
+        logger.debug(f"Validating return code {self.response_code}: {self.response_text}")
+        if self.success_start <= self.response_code < self.success_end:
             return self
+        elif self.response_code == self.permission_denied_code:
+            raise PermissionDeniedError(self.response_text)
+        elif self.response_code == self.not_found_code:
+            raise NotFoundError(self.response_text)
+        elif self.response_code == self.rate_limit_code:
+            raise RateLimitError(self.response_text)
+        elif self.response_code == self.server_error_code:
+            raise InternalServerError(self.response_text)
         elif 400 <= self.response_code < 500:
             raise RetryableError(f"code: {self.response_code} response: {self.response_text}")
         else:
