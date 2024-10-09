@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "restfull"
 description = "Python REST API Frontend"
-version = "1.0.9"
+version = "1.0.10"
 readme = "README.md"
 authors = ["Michael Minichino <info@unix.us.com>"]
 classifiers = [
@@ -51,6 +51,7 @@ build-backend = "poetry.core.masonry.api"
 addopts = "-rE --no-header -v -p no:warnings"
 log_file = "pytest.log"
 log_file_level = "DEBUG"
+asyncio_mode = "auto"
 pythonpath = [
     ".",
     "tests"

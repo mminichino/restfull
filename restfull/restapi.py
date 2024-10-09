@@ -29,11 +29,19 @@ logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 
 
+class BadRequestError(NonFatalError):
+    pass
+
+
 class PermissionDeniedError(NonFatalError):
     pass
 
 
 class NotFoundError(NonFatalError):
+    pass
+
+
+class UnprocessableEntityError(NonFatalError):
     pass
 
 
@@ -72,8 +80,10 @@ class RestAPI(object):
         self.response_code = 200
         self.success_start = 200
         self.success_end = 299
+        self.bad_request_code = 400
         self.permission_denied_code = 403
         self.not_found_code = 404
+        self.unprocessable_entity_code = 422
         self.rate_limit_code = 429
         self.server_error_code = 500
         try:
@@ -171,22 +181,28 @@ class RestAPI(object):
         self.response_code = response.status_code
         return self
 
-    def validate(self):
-        logger.debug(f"Validating return code {self.response_code}: {self.response_text}")
-        if self.success_start <= self.response_code < self.success_end:
+    def validate(self, code: int = None, text: str = None):
+        check_code = code if code is not None else self.response_code
+        check_text = text if text is not None else self.response_text
+        logger.debug(f"Validating return code {check_code}: {check_text}")
+        if self.success_start <= check_code < self.success_end:
             return self
-        elif self.response_code == self.permission_denied_code:
-            raise PermissionDeniedError(self.response_text)
-        elif self.response_code == self.not_found_code:
-            raise NotFoundError(self.response_text)
-        elif self.response_code == self.rate_limit_code:
-            raise RateLimitError(self.response_text)
-        elif self.response_code == self.server_error_code:
-            raise InternalServerError(self.response_text)
-        elif 400 <= self.response_code < 500:
-            raise RetryableError(f"code: {self.response_code} response: {self.response_text}")
+        elif check_code == self.bad_request_code:
+            raise BadRequestError(check_text)
+        elif check_code == self.permission_denied_code:
+            raise PermissionDeniedError(check_text)
+        elif check_code == self.not_found_code:
+            raise NotFoundError(check_text)
+        elif check_code == self.unprocessable_entity_code:
+            raise UnprocessableEntityError(check_text)
+        elif check_code == self.rate_limit_code:
+            raise RateLimitError(check_text)
+        elif check_code == self.server_error_code:
+            raise InternalServerError(check_text)
+        elif 400 <= check_code < 500:
+            raise RetryableError(f"code: {check_code} response: {check_text}")
         else:
-            raise NonRetryableError(f"code: {self.response_code} response: {self.response_text}")
+            raise NonRetryableError(f"code: {check_code} response: {check_text}")
 
     def json(self, data_key: Union[str, None] = None):
         try:
@@ -272,8 +288,12 @@ class RestAPI(object):
         if pages > 1:
             for result in asyncio.as_completed([self.get_data_async(self.paged_endpoint(endpoint, page_tag, page, per_page_tag, per_page),
                                                                     data_key=data_key) for page in range(2, pages + 1)]):
-                block = await result
-                data.extend(block)
+                try:
+                    block = await result
+                    if block:
+                        data.extend(block)
+                except Exception:
+                    raise
 
         return data
 
@@ -287,8 +307,11 @@ class RestAPI(object):
                   data_key="data",
                   cursor: str = None,
                   category: str = None):
-        self.response_dict = self.loop.run_until_complete(self.get_paged_endpoint(endpoint, page_tag, total_tag, pages_tag, per_page_tag, per_page, data_key, cursor, category))
-        return self
+        try:
+            self.response_dict = self.loop.run_until_complete(self.get_paged_endpoint(endpoint, page_tag, total_tag, pages_tag, per_page_tag, per_page, data_key, cursor, category))
+            return self
+        except Exception:
+            raise
 
     @property
     def is_present(self) -> bool:
@@ -321,26 +344,32 @@ class RestAPI(object):
     def build_url(self, endpoint: str) -> str:
         return f"{self.url_prefix}{endpoint}"
 
-    @retry()
+    @retry(always_raise_list=(BadRequestError, PermissionDeniedError, NotFoundError, UnprocessableEntityError, InternalServerError, NonRetryableError))
     async def get_data_async(self, endpoint: str, data_key: Union[str, None] = None):
         url = self.build_url(endpoint)
         conn = TCPConnector(ssl_context=self.ssl_context)
         async with ClientSession(headers=self.request_headers, connector=conn) as session:
             async with session.get(url, verify_ssl=self.verify) as response:
-                if self.response_code < 400:
-                    self.response_code = response.status
-                response = await response.json()
+                data = await response.text()
+                self.validate(response.status, data)
+                self.response_code = response.status
+                self.response_text = data
+                payload = json.loads(data)
                 if data_key:
-                    return response.get(data_key)
+                    return payload.get(data_key)
                 else:
-                    return response
+                    return payload
 
-    @retry()
+    @retry(always_raise_list=(BadRequestError, PermissionDeniedError, NotFoundError, UnprocessableEntityError, InternalServerError, NonRetryableError))
     async def get_kv_async(self, endpoint: str, key: str, value: Union[str, int, bool], data_key: Union[str, None] = None):
         url = self.build_url(endpoint)
         conn = TCPConnector(ssl_context=self.ssl_context)
         async with ClientSession(headers=self.request_headers, connector=conn) as session:
             async with session.get(url, verify_ssl=self.verify) as response:
-                response = await response.json()
-                data = response.get(data_key) if data_key else response
-                return [item for item in data if item.get(key) == value]
+                data = await response.text()
+                self.validate(response.status, data)
+                self.response_code = response.status
+                self.response_text = data
+                payload = json.loads(data)
+                subset = payload.get(data_key) if data_key else payload
+                return [item for item in subset if item.get(key) == value]

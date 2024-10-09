@@ -4,6 +4,7 @@ import logging
 import pytest
 import warnings
 import asyncio
+import unittest
 from restfull.restapi import RestAPI, RetryableError, NotFoundError, NonRetryableError
 from restfull.basic_auth import BasicAuth
 
@@ -12,15 +13,15 @@ logger = logging.getLogger('tests.test_1')
 logger.addHandler(logging.NullHandler())
 
 
-@pytest.mark.serial
-class TestMain(object):
+@pytest.mark.asyncio
+class TestMain(unittest.TestCase):
 
     @classmethod
-    def setup_class(cls):
+    def setUp(cls):
         pass
 
     @classmethod
-    def teardown_class(cls):
+    def tearDown(cls):
         pass
 
     def test_1(self):
@@ -131,7 +132,6 @@ class TestMain(object):
             assert False
         assert False
 
-    @pytest.mark.asyncio
     async def test_13(self):
         auth = BasicAuth("username", "password")
         rest = RestAPI(auth, "reqres.in")
@@ -147,7 +147,6 @@ class TestMain(object):
         data_sorted = sorted(data, key=lambda d: d['id'])
         assert data_sorted[7].get("first_name") == "Lindsay"
 
-    @pytest.mark.asyncio
     async def test_14(self):
         data = []
         auth = BasicAuth("username", "password")
@@ -161,3 +160,56 @@ class TestMain(object):
 
         assert len(data) == 1
         assert data[0].get("first_name") == "Tobias"
+
+    async def test_15(self):
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/unknown/23"
+
+        try:
+            total, pages, _ = rest.get_by_page(endpoint).validate().as_json().page_count()
+        except NotFoundError:
+            return
+        except Exception as e:
+            logging.exception(e)
+            assert False
+
+        assert False
+
+    async def test_16(self):
+        data = []
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/unknown/23"
+        pages = 2
+
+        try:
+            for result in asyncio.as_completed([rest.get_data_async(rest.paged_endpoint(endpoint, page=page), data_key="data") for page in range(2, pages + 1)]):
+                try:
+                    block = await result
+                    data.extend(block)
+                except Exception:
+                    raise
+        except NotFoundError:
+            return
+
+        assert False
+
+    async def test_17(self):
+        data = []
+        auth = BasicAuth("username", "password")
+        rest = RestAPI(auth, "reqres.in")
+        endpoint = "/api/unknown/23"
+        pages = 2
+
+        try:
+            for result in asyncio.as_completed([rest.get_kv_async(rest.paged_endpoint(endpoint, page=page), key="id", value=9, data_key="data") for page in range(1, pages + 1)]):
+                try:
+                    block = await result
+                    data.extend(block)
+                except Exception:
+                    raise
+        except NotFoundError:
+            return
+
+        assert False
