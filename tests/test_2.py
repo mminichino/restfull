@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import logging
 import pytest
 import warnings
@@ -76,12 +77,12 @@ class TestMain(unittest.TestCase):
     def test_8(self):
         rest = RestAPI(NoAuth(), "link.testfile.org", True, True)
         endpoint = "/PDF200MB"
-        with tempfile.NamedTemporaryFile() as temp_file:
-            temp_file_name = temp_file.name
-            logger.debug(f"Temp file: {temp_file_name}")
-            rest.download(endpoint, temp_file_name)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_file = os.path.join(temp_dir, 'file.pdf')
+            logger.debug(f"Temp file: {temp_file}")
+            rest.download(endpoint, temp_file)
             hasher = hashlib.sha1()
-            with open(temp_file_name, 'rb') as file:
+            with open(temp_file, 'rb') as file:
                 while True:
                     chunk = file.read(1048576)
                     if not chunk:
