@@ -33,7 +33,7 @@ attrs = ">=23.1.0"
 requests = ">=2.31.0"
 aiohttp = ">=3.9.3"
 pytoolbase = ">=1.0.2"
-pip_system_certs = ">=4.0"
+certifi = ">=2024.8.30"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.1.1"
@@ -101,13 +101,11 @@ commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
 [tool.tox.env.win38]
 description = "Windows 3.8 full test"
 env_python = "python38"
-pass_env = ["LOCALAPPDATA"]
 commands_pre = [["poetry", "env", "use", "38"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
 
 [tool.tox.env.win312]
 description = "Windows 3.12 full test"
 env_python = "python312"
-pass_env = ["LOCALAPPDATA"]
 commands_pre = [["poetry", "env", "use", "312"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "rest_api"]]

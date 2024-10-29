@@ -1,7 +1,7 @@
 ##
 ##
 
-import pip_system_certs.wrapt_requests
+import certifi
 import logging
 import json
 import requests
@@ -21,6 +21,7 @@ logger = logging.getLogger('restfull.restapi')
 logger.addHandler(logging.NullHandler())
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
+certifi_where = certifi.where()
 
 
 class BadRequestError(NonFatalError):
@@ -88,6 +89,7 @@ class RestAPI(object):
             asyncio.set_event_loop(self.loop)
 
         self.ssl_context = ssl.create_default_context()
+        self.ssl_context.load_verify_locations(certifi_where)
 
         self.request_headers = self.auth_class.get_header()
         self.session = requests.Session()
