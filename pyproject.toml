@@ -101,11 +101,11 @@ commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
 [tool.tox.env.win38]
 description = "Windows 3.8 full test"
 env_python = "python38"
-commands_pre = [["poetry", "env", "use", "38"], ["poetry", "install"]]
+commands_pre = [["poetry", "env", "use", "38"], ["poetry", "lock"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
 
 [tool.tox.env.win312]
 description = "Windows 3.12 full test"
 env_python = "python312"
-commands_pre = [["poetry", "env", "use", "312"], ["poetry", "install"]]
+commands_pre = [["poetry", "env", "use", "312"], ["poetry", "lock"], ["poetry", "install"]]
 commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
