@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "restfull"
 description = "Python REST API Frontend"
-version = "1.0.10"
+version = "1.0.11"
 readme = "README.md"
 authors = ["Michael Minichino <info@unix.us.com>"]
 classifiers = [
@@ -32,9 +32,8 @@ python = ">=3.8,<4"
 attrs = ">=23.1.0"
 requests = ">=2.31.0"
 aiohttp = ">=3.9.3"
-pytoolbase = ">=1.0.1"
-python-certifi-win32 = ">=1.6.1"
-certifi = ">=2023.5.7"
+pytoolbase = ">=1.0.2"
+pip_system_certs = ">=4.0"
 
 [tool.poetry.group.test.dependencies]
 pytest = ">=8.1.1"
@@ -42,16 +41,18 @@ pytest-asyncio = ">=0.23.6"
 
 [tool.poetry.group.dev.dependencies]
 bumpversion = "^0.6.0"
+poetry-core = ">=1.9.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+asyncio_mode = "auto"
 addopts = "-rE --no-header -v -p no:warnings"
 log_file = "pytest.log"
 log_file_level = "DEBUG"
-asyncio_mode = "auto"
 pythonpath = [
     ".",
     "tests"
@@ -65,3 +66,48 @@ python_classes = [
 python_files = [
     "test_[0-9]*.py"
 ]
+markers = [
+    "rest_api: marks a test as a standard API test",
+    "http_test: marks a test as a general protocol test"
+]
+
+[tool.tox]
+requires = ["tox>=4.19"]
+env_list = ["py313", "py312", "py38", "win312", "win38"]
+no_package = true
+
+[tool.tox.env_run_base]
+skip_install = true
+allowlist_externals = ["poetry"]
+
+[tool.tox.env.py38]
+description = "Posix 3.8 full test"
+env_python = "python3.8"
+commands_pre = [["poetry", "env", "use", "3.8"], ["poetry", "install"]]
+commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
+
+[tool.tox.env.py312]
+description = "Posix 3.12 full test"
+env_python = "python3.12"
+commands_pre = [["poetry", "env", "use", "3.12"], ["poetry", "install"]]
+commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
+
+[tool.tox.env.py313]
+description = "Posix 3.13 full test"
+env_python = "python3.13"
+commands_pre = [["poetry", "env", "use", "3.13"], ["poetry", "install"]]
+commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
+
+[tool.tox.env.win38]
+description = "Windows 3.8 full test"
+env_python = "python38"
+pass_env = ["LOCALAPPDATA"]
+commands_pre = [["poetry", "env", "use", "38"], ["poetry", "install"]]
+commands = [["poetry", "run", "pytest", "-m", "rest_api"]]
+
+[tool.tox.env.win312]
+description = "Windows 3.12 full test"
+env_python = "python312"
+pass_env = ["LOCALAPPDATA"]
+commands_pre = [["poetry", "env", "use", "312"], ["poetry", "install"]]
+commands = [["poetry", "run", "pytest", "-m", "rest_api"]]

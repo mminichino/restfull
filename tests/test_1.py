@@ -13,6 +13,7 @@ logger = logging.getLogger('tests.test_1')
 logger.addHandler(logging.NullHandler())
 
 
+@pytest.mark.rest_api
 @pytest.mark.asyncio
 class TestMain(unittest.TestCase):
 

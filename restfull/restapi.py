@@ -1,7 +1,7 @@
 ##
 ##
 
-import os
+import pip_system_certs.wrapt_requests
 import logging
 import json
 import requests
@@ -10,17 +10,11 @@ import asyncio
 import ssl
 from restfull.base_auth import RestAuthBase
 from restfull.data import JsonObject, JsonList
-from typing import Union
+from typing import Union, IO
 from requests.adapters import HTTPAdapter, Retry
 from aiohttp import ClientSession, TCPConnector
 from pytoolbase.retry import retry
 from pytoolbase.exceptions import NonFatalError
-if os.name == 'nt':
-    import certifi_win32
-    certifi_where = certifi_win32.wincerts.where()
-else:
-    import certifi
-    certifi_where = certifi.where()
 
 warnings.filterwarnings("ignore")
 logger = logging.getLogger('restfull.restapi')
@@ -76,6 +70,7 @@ class RestAPI(object):
         self.port = port
         self.scheme = 'https' if self.ssl else 'http'
         self.response_text = None
+        self.response_content = None
         self.response_dict: Union[list, dict] = {}
         self.response_code = 200
         self.success_start = 200
@@ -93,7 +88,6 @@ class RestAPI(object):
             asyncio.set_event_loop(self.loop)
 
         self.ssl_context = ssl.create_default_context()
-        self.ssl_context.load_verify_locations(certifi_where)
 
         self.request_headers = self.auth_class.get_header()
         self.session = requests.Session()
@@ -132,6 +126,15 @@ class RestAPI(object):
         logger.debug(f"GET {url}")
         response = self.session.get(url, auth=self.auth_class, verify=self.verify)
         self.response_text = response.text
+        self.response_code = response.status_code
+        return self
+
+    def get_bytes(self, endpoint: str):
+        url = self.build_url(endpoint)
+        self.reset()
+        logger.debug(f"GET {url}")
+        response = self.session.get(url, auth=self.auth_class, verify=self.verify)
+        self.response_content = response.content
         self.response_code = response.status_code
         return self
 
@@ -212,6 +215,15 @@ class RestAPI(object):
                 return json.loads(self.response_text).get(data_key)
         except (json.decoder.JSONDecodeError, AttributeError):
             return {}
+
+    def text(self):
+        return self.response_text
+
+    def content(self) -> bytes:
+        return self.response_content
+
+    def response(self):
+        return self.response_code, self.response_text
 
     def as_json(self, data_key: Union[str, None] = None):
         try:
@@ -313,6 +325,10 @@ class RestAPI(object):
         except Exception:
             raise
 
+    def download(self, endpoint: str, filename: str):
+        with open(filename, 'wb') as fd:
+            self.loop.run_until_complete(self.write_stream_async(endpoint, fd))
+
     @property
     def is_present(self) -> bool:
         if self.response_dict:
@@ -373,3 +389,18 @@ class RestAPI(object):
                 payload = json.loads(data)
                 subset = payload.get(data_key) if data_key else payload
                 return [item for item in subset if item.get(key) == value]
+
+    @retry(always_raise_list=(BadRequestError, PermissionDeniedError, NotFoundError, UnprocessableEntityError, InternalServerError, NonRetryableError))
+    async def get_stream_async(self, endpoint: str):
+        url = self.build_url(endpoint)
+        logger.debug(f"Stream from: {url}")
+        conn = TCPConnector(ssl_context=self.ssl_context)
+        async with ClientSession(headers=self.request_headers, connector=conn) as session:
+            async with session.get(url, verify_ssl=self.verify) as response:
+                self.validate(response.status)
+                async for chunk, _ in response.content.iter_chunks():
+                    yield chunk
+
+    async def write_stream_async(self, endpoint: str, fd: IO[bytes]):
+        async for chunk in self.get_stream_async(endpoint):
+            fd.write(chunk)
