@@ -16,6 +16,7 @@ logger.addHandler(logging.NullHandler())
 
 @pytest.mark.rest_api
 @pytest.mark.http_test
+@pytest.mark.asyncio
 class TestMain(unittest.TestCase):
 
     @classmethod
