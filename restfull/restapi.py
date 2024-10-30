@@ -213,8 +213,13 @@ class RestAPI(object):
                 raise InternalServerError(check_text)
         elif 400 <= check_code < 500:
             raise RetryableError(f"code: {check_code} response: {check_text}")
+        elif 500 <= check_code < 600:
+            if self._retry_server_errors:
+                raise RetryableError(f"code: {check_code} response: {check_text}")
+            else:
+                raise NonRetryableError(f"code: {check_code} response: {check_text}")
         else:
-            raise NonRetryableError(f"code: {check_code} response: {check_text}")
+            raise RuntimeError(f"unknown response code: {check_code} response: {check_text}")
 
     def json(self, data_key: Union[str, None] = None):
         try:
