@@ -7,7 +7,7 @@ import warnings
 import unittest
 import hashlib
 import tempfile
-from restfull.restapi import RestAPI
+from restfull.restapi import RestAPI, RetryableError, InternalServerError
 from restfull.no_auth import NoAuth
 
 warnings.filterwarnings("ignore")
@@ -67,6 +67,25 @@ class TestMain(unittest.TestCase):
         assert data.strip() == "success"
 
     def test_7(self):
+        rest = RestAPI(NoAuth(), "httpstat.us", False)
+        rest.retry_server_errors()
+        endpoint = "/500"
+        try:
+            rest.get(endpoint).validate().response()
+        except RetryableError:
+            return
+        assert False
+
+    def test_8(self):
+        rest = RestAPI(NoAuth(), "httpstat.us", False)
+        endpoint = "/500"
+        try:
+            rest.get(endpoint).validate().response()
+        except InternalServerError:
+            return
+        assert False
+
+    def test_9(self):
         rest = RestAPI(NoAuth(), "link.testfile.org", True, True)
         endpoint = "/PDF10MB"
         data = rest.get_bytes(endpoint).validate().content()
@@ -74,7 +93,7 @@ class TestMain(unittest.TestCase):
         hasher.update(data)
         assert hasher.hexdigest() == "f95fa54f809dc33234ed81c2c4326c44633b21a3"
 
-    def test_8(self):
+    def test_10(self):
         rest = RestAPI(NoAuth(), "link.testfile.org", True, True)
         endpoint = "/PDF200MB"
         with tempfile.TemporaryDirectory() as temp_dir:

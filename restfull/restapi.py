@@ -82,6 +82,7 @@ class RestAPI(object):
         self.unprocessable_entity_code = 422
         self.rate_limit_code = 429
         self.server_error_code = 500
+        self._retry_server_errors = False
         try:
             self.loop = asyncio.get_event_loop()
         except RuntimeError:
@@ -121,6 +122,9 @@ class RestAPI(object):
 
     def set_server_error_code(self, code: int):
         self.server_error_code = code
+
+    def retry_server_errors(self):
+        self._retry_server_errors = True
 
     def get(self, endpoint: str):
         url = self.build_url(endpoint)
@@ -203,7 +207,10 @@ class RestAPI(object):
         elif check_code == self.rate_limit_code:
             raise RateLimitError(check_text)
         elif check_code == self.server_error_code:
-            raise InternalServerError(check_text)
+            if self._retry_server_errors:
+                raise RetryableError(f"code: {check_code} response: {check_text}")
+            else:
+                raise InternalServerError(check_text)
         elif 400 <= check_code < 500:
             raise RetryableError(f"code: {check_code} response: {check_text}")
         else:
